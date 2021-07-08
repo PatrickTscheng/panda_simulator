@@ -41,6 +41,16 @@ namespace panda_gazebo
 
 bool ArmKinematicsInterface::init(ros::NodeHandle& nh)
 {
+  //set namespace and robotname
+  std::string robot_name_;
+  if(nh.getNamespace()!="/"){
+    _robot_namespace_ = nh.getNamespace();
+    robot_name_ = _robot_namespace_;
+  } else {
+    _robot_namespace_ = "";
+    robot_name_ = "/panda";
+  }
+
   if (!parseParams(nh))
   {
     return false;
@@ -60,19 +70,19 @@ bool ArmKinematicsInterface::init(ros::NodeHandle& nh)
     return false;
   }
   gravity_torques_seq_ = 0;
-  robot_state_publisher_ = nh.advertise<franka_core_msgs::RobotState>(
+  robot_state_publisher_ = nh.advertise<franka_core_msgs::RobotState>( _robot_namespace_ + 
                             "/panda_simulator/custom_franka_state_controller/robot_state", 1);
-  endpoint_state_pub_ = nh.advertise<franka_core_msgs::EndPointState>(
+  endpoint_state_pub_ = nh.advertise<franka_core_msgs::EndPointState>( _robot_namespace_ + 
                             "/panda_simulator/custom_franka_state_controller/tip_state", 1);
   joint_state_sub_ = nh.subscribe("joint_states", 1,
                        &ArmKinematicsInterface::jointStateCallback, this);
-  joint_command_sub_ = nh.subscribe("/panda_simulator/motion_controller/arm/joint_commands", 1,
+  joint_command_sub_ = nh.subscribe( _robot_namespace_ + "/panda_simulator/motion_controller/arm/joint_commands", 1,
                        &ArmKinematicsInterface::jointCommandCallback, this);
-  ft_sensor_sub_ = nh.subscribe("/gazebo/robot/wrist/ft", 1,
+  ft_sensor_sub_ = nh.subscribe("/gazebo/robot" + robot_name_ + "/wrist/ft", 1,
                        &ArmKinematicsInterface::ftSensorCallback, this);
   // Update at 100Hz
   update_timer_ = nh.createTimer(100, &ArmKinematicsInterface::update, this);
-  joint_limits_pub_ = nh.advertise<franka_core_msgs::JointLimits>(
+  joint_limits_pub_ = nh.advertise<franka_core_msgs::JointLimits>( _robot_namespace_ + 
                             "/panda_simulator/joint_limits", 1, true);
   joint_limits_pub_.publish(joint_limits_);
   return true;
@@ -172,25 +182,25 @@ bool ArmKinematicsInterface::parseParams(const ros::NodeHandle& nh)
 {
   std::string urdf_xml;
   ROS_DEBUG_NAMED("kinematics", "Reading xml file from parameter server");
-  if (!nh.getParam("/robot_description", urdf_xml))
+  if (!nh.getParam(_robot_namespace_ + "/robot_description", urdf_xml))
   {
     ROS_FATAL_NAMED("kinematics",
         "Could not load the xml from parameter server: %s", urdf_xml.c_str());
     return false;
   }
-  if (!nh.getParam("/arm/root_name", root_name_))
+  if (!nh.getParam(_robot_namespace_ + "/arm/root_name", root_name_))
   {
     ROS_FATAL_NAMED("kinematics",
         "No root name for Kinematic Chain found on parameter server");
     return false;
   }
-  if (!nh.getParam("/arm/tip_name", tip_name_))
+  if (!nh.getParam(_robot_namespace_ + "/arm/tip_name", tip_name_))
   {
     ROS_FATAL_NAMED("kinematics",
         "No tip name for Kinematic Chain found on parameter server");
     return false;
   }
-  if (!nh.getParam("/arm/gravity_tip_name", gravity_tip_name_))
+  if (!nh.getParam(_robot_namespace_ + "/arm/gravity_tip_name", gravity_tip_name_))
   {
     ROS_FATAL_NAMED("kinematics",
         "No tip name for Kinematic Chain found on parameter server");
@@ -203,7 +213,7 @@ bool ArmKinematicsInterface::parseParams(const ros::NodeHandle& nh)
         "Failed to extract kdl tree from xml robot description.");
     return false;
   }
-  if (!nh.getParam("/robot_config/joint_config/joint_acceleration_limit", acceleration_map_))
+  if (!nh.getParam( _robot_namespace_ + "/robot_config/joint_config/joint_acceleration_limit", acceleration_map_))
   {
     ROS_FATAL_NAMED("kinematics",
       "Failed to find joint_acceleration_limit on the param server.");
@@ -417,7 +427,11 @@ void ArmKinematicsInterface::publishEndpointState()
 
     std::shared_ptr<const geometry_msgs::Wrench> ft_vals;
     ft_msg_buffer_.get(ft_vals);
-    endpoint_state.K_F_ext_hat_K.header.frame_id = "panda_link7";
+    if (_robot_namespace_ == "") {
+      endpoint_state.K_F_ext_hat_K.header.frame_id = "panda_link7";
+    } else {
+      endpoint_state.K_F_ext_hat_K.header.frame_id = _robot_namespace_.substr(1) + "_link7";
+    }
     const geometry_msgs::Wrench ft_in_K_frame = *ft_vals.get();
     endpoint_state.K_F_ext_hat_K.wrench = ft_in_K_frame;
 

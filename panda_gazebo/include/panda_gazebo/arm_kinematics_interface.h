@@ -94,6 +94,7 @@ long endpoint_state_seq_;
 long gravity_torques_seq_;
 
 ros::Timer update_timer_;
+std::string _robot_namespace_;
 
 KDLMethods* kdl_;
 

@@ -34,17 +34,24 @@ namespace panda_gazebo {
 void ArmControllerInterface::init(ros::NodeHandle& nh,
         boost::shared_ptr<controller_manager::ControllerManager> controller_manager) {
     current_mode_ = 5;
-
-  if (!nh.getParam("/controllers_config/position_controller", position_controller_name_)) {
+  
+  //set namespace
+  if(nh.getNamespace()!="/"){
+    _robot_namespace_ = nh.getNamespace();
+  } else {
+    _robot_namespace_ = "";
+  }
+  
+  if (!nh.getParam(_robot_namespace_ + "/controllers_config/position_controller", position_controller_name_)) {
         position_controller_name_ = "position_joint_position_controller";
     }
-  if (!nh.getParam("/controllers_config/torque_controller", torque_controller_name_)) {
+  if (!nh.getParam(_robot_namespace_ + "/controllers_config/torque_controller", torque_controller_name_)) {
         torque_controller_name_ = "effort_joint_torque_controller";
     }
-  if (!nh.getParam("/controllers_config/velocity_controller", velocity_controller_name_)) {
+  if (!nh.getParam(_robot_namespace_ + "/controllers_config/velocity_controller", velocity_controller_name_)) {
         velocity_controller_name_ = "velocity_joint_velocity_controller";
     }
-  if (!nh.getParam("/controllers_config/default_controller", default_controller_name_)) {
+  if (!nh.getParam(_robot_namespace_ + "/controllers_config/default_controller", default_controller_name_)) {
         default_controller_name_ = "position_joint_trajectory_controller";
     }
 
@@ -73,11 +80,11 @@ void ArmControllerInterface::init(ros::NodeHandle& nh,
   }
   
   controller_manager_ = controller_manager;
-  joint_command_sub_ = nh.subscribe("/panda_simulator/motion_controller/arm/joint_commands", 1,
+  joint_command_sub_ = nh.subscribe(_robot_namespace_ + "/panda_simulator/motion_controller/arm/joint_commands", 1,
                        &ArmControllerInterface::jointCommandCallback, this);
 
   // Command Timeout
-  joint_command_timeout_sub_ = nh.subscribe("/panda_simulator/motion_controller/arm/joint_command_timeout", 1,
+  joint_command_timeout_sub_ = nh.subscribe(_robot_namespace_ + "/panda_simulator/motion_controller/arm/joint_command_timeout", 1,
                        &ArmControllerInterface::jointCommandTimeoutCallback, this);
   double command_timeout_default;
   nh.param<double>("command_timeout", command_timeout_default, 0.2);

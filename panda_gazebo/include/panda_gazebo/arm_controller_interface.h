@@ -71,6 +71,7 @@ namespace panda_gazebo {
     std::vector<std::string> all_controllers_;
 
     std::map<std::string,int> controller_name_to_mode_map_;
+    std::string _robot_namespace_;
 
   protected:
     void jointCommandTimeoutCallback(const std_msgs::Float64 msg);
